@@ -28,7 +28,7 @@ function response(status, data, origin, extras = {}) {
     headers['Access-Control-Allow-Headers'] = 'X-Chordroom-Code, Content-Type';
     headers['Access-Control-Max-Age'] = '600';
   }
-  return new Response(JSON.stringify(data), {status, headers});
+  return new Response(status === 204 ? null : JSON.stringify(data), {status, headers});
 }
 
 async function sameSecret(given, expected) {
