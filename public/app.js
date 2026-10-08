@@ -54,9 +54,139 @@ function importDialog(edit=false){const s=edit?current():null;dialogBody(edit?'N
 $('edit-chart').value=s?.chart||'';$('upload-file').onclick=()=>$('file-input').click();$('file-input').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>250000){errorBox('Bestand is te groot (maximum 250 kB).');return;}const raw=await file.text();$('edit-chart').value=raw;if(!$('edit-title').value){$('edit-title').value=file.name.replace(/\.(cho|chopro|pro|txt|crd)$/i,'');}const meta=M.metadata(raw);if(meta.title)$('edit-title').value=meta.title;if(meta.artist)$('edit-artist').value=meta.artist;if(meta.key)$('edit-key').value=meta.key;if(meta.capo)$('edit-capo').value=meta.capo;};
 $('confirm-import').onclick=()=>{try{const input={title:$('edit-title').value,artist:$('edit-artist').value,key:$('edit-key').value,capo:$('edit-capo').value,chart:$('edit-chart').value};const song=songFromInput(input);if(s){Object.assign(s,{...song,id:s.id,source:s.source,created:s.created,url:s.url});remember();$('dialog').close();renderWorkspace();renderLibrary();toast('Nummer bijgewerkt.');}else addSong(song);}catch(e){errorBox(e.message);}};}
 function errorBox(msg){const b=$('dialog-error');b.textContent=msg;b.classList.remove('hidden');}
-function searchDialog(){if(location.protocol==='file:' || !['127.0.0.1','localhost'].includes(location.hostname)){dialogBody('Akkoorden zoeken','Op GitHub Pages draait Chordroom zonder privéserver. Via Fretlist of Ultimate Guitar kun je een akkoordenschema kopiëren en hier importeren.',`<div class="import-sources"><a href="https://www.ultimate-guitar.com/" target="_blank" rel="noopener noreferrer">Ultimate Guitar ↗</a><a href="https://fretlist.com/tools/ultimate-guitar-to-chordpro" target="_blank" rel="noopener noreferrer">Fretlist ChordPro-converter ↗</a></div><p class="help">Automatisch zoeken via de onofficiële API werkt alleen in de lokale serverversie met jouw privésleutel. Zet de sleutel nooit in GitHub Pages.</p><button id="static-import" class="primary">Akkoorden plakken</button>`);$('static-import').onclick=()=>importDialog();return;}dialogBody('Zoek een nummer','Zoek een openbaar akkoordenschema via de experimentele, onofficiële API. Zonder API-sleutel kun je altijd handmatig importeren.',`<form id="search-form" class="search-form"><label for="search-input">Artiest of titel</label><div style="display:flex;gap:8px"><input id="search-input" placeholder="Bijv. Coldplay Yellow" minlength="2" required autofocus><button id="search-button" class="primary" type="submit">Zoeken</button></div></form><p class="help">API-sleutel nodig? Maak lokaal het bestand <code>.env</code> aan met <code>PARSE_API_KEY=...</code> en herstart Chordroom. Je sleutel blijft op de lokale server.</p><div id="dialog-error" class="error hidden"></div><div id="search-results" class="search-results"></div><div class="dialog-actions"><button class="outline" id="alternative-import" type="button">Zelf akkoorden plakken</button></div>`);$('alternative-import').onclick=()=>importDialog();$('search-form').onsubmit=async e=>{e.preventDefault();const query=$('search-input').value.trim();if(query.length<2)return;const button=$('search-button');button.disabled=true;button.textContent='Zoeken…';$('dialog-error').classList.add('hidden');$('search-results').textContent='';try{const r=await api('/api/search?q='+encodeURIComponent(query));renderResults(r.results||[]);}catch(e){errorBox(e.message);}finally{button.disabled=false;button.textContent='Zoeken';}};}
-async function api(url){const r=await fetch(url,{headers:{'Accept':'application/json'}});let body;try{body=await r.json();}catch{throw new Error(`Server reageerde niet met JSON (HTTP ${r.status}).`);}if(!r.ok)throw new Error(body.error||'Onbekende serverfout');return body;}
-function renderResults(rows){const box=$('search-results');box.textContent='';if(!rows.length){box.textContent='Geen resultaten. Probeer een andere zoekterm of gebruik de handmatige import.';return;}for(const row of rows.slice(0,35)){const item=document.createElement('div');item.className='search-result';const meta=document.createElement('div');const title=document.createElement('b');title.textContent=row.song_name||'Onbekend nummer';const subtitle=document.createElement('span');subtitle.textContent=`${row.artist_name||'Onbekend'} · ${row.type||'Chords'} · ★ ${Number(row.rating||0).toFixed(1)} · ${row.votes||0} stemmen`;meta.append(title,subtitle);const button=document.createElement('button');button.textContent='Importeer';button.className='outline small';button.onclick=async()=>{button.disabled=true;button.textContent='Ophalen…';try{const result=await api('/api/chart?url='+encodeURIComponent(row.url));const song=songFromInput({title:row.song_name||result.title,artist:row.artist_name||result.artist,key:result.key||row.tonality||'',capo:result.capo,chart:result.chart,source:'api',url:row.url});addSong(song);}catch(e){errorBox(e.message);button.disabled=false;button.textContent='Opnieuw';}};item.append(meta,button);box.append(item);}}
+// The public GitHub Pages build injects a Worker URL into api-config.js.
+// Never put PARSE_API_KEY or the access code in a public file.
+function isLocalServer(){return location.protocol!=='file:' && ['127.0.0.1','localhost'].includes(location.hostname);}
+function cloudEndpoint(){
+  const value=String(window.CHORDROOM_API_BASE||'').trim().replace(/\/+$/,'');
+  try { const u=new URL(value);return u.protocol==='https:' && !u.username && !u.password ? u.origin : ''; }
+  catch {return '';}
+}
+function hasOnlineSearch(){return isLocalServer()||Boolean(cloudEndpoint());}
+function accessCode(){try{return sessionStorage.getItem('chordroom.access.v1')||'';}catch{return '';}}
+function storeAccessCode(code){try{if(code)sessionStorage.setItem('chordroom.access.v1',code);}catch{}}
+let previousQuery='';
+function searchDialog(){
+  const cloud=!isLocalServer(), available=hasOnlineSearch();
+  const info=available
+    ? 'Zoek op artiest of titel. Het beste beschikbare akkoordenschema wordt automatisch in je bibliotheek geladen. Andere versies kun je ook kiezen.'
+    : 'Automatisch zoeken is nog niet verbonden. De website werkt al, maar de Cloudflare-koppeling moet één keer worden ingesteld.';
+  const instructions=available ? '' :
+    '<p class="api-setup-warning">De online zoekserver is nog niet ingericht. '+
+    '<a href="https://github.com/mlemson/Chordroom/blob/main/README.md#automatisch-online-akkoorden-zoeken" target="_blank" rel="noopener noreferrer">Bekijk de activatiestappen op GitHub</a>.</p>';
+  const field=cloud&&available ? '<div class="api-code-wrap"><label for="access-code">Persoonlijke toegangscode</label>'+
+    '<input id="access-code" type="password" autocomplete="off" placeholder="Je Chordroom-toegangscode" aria-describedby="code-help">'+
+    '<p class="help" id="code-help">Alleen nodig voor je privézoekserver. De code wordt voor deze browsersessie onthouden, niet gepubliceerd op GitHub.</p></div>' : '';
+  dialogBody('Vind je akkoorden automatisch',info,
+    instructions+'<form id="search-form" class="search-form">'+
+    '<label for="search-input">Artiest, titel of Ultimate Guitar-link</label>'+
+    '<div class="search-entry"><input id="search-input" placeholder="Bijvoorbeeld Coldplay Yellow" minlength="2" required>'+
+    '<button id="search-button" class="primary" type="submit">Zoeken en openen</button></div>'+
+    field+'<label class="auto-choice"><input type="checkbox" id="auto-first" checked> Beste akkoordenversie direct openen</label>'+
+    '</form><div id="dialog-error" class="error hidden" role="alert"></div>'+
+    '<div id="search-results" class="search-results" aria-live="polite"></div>'+
+    '<p class="help">Zoektip: plak een volledige Ultimate Guitar-link om dat specifieke arrangement meteen te openen. '+
+    'Er kunnen verschillen zijn tussen arrangementen. Controleer zo nodig de capo en toonsoort.</p>'+
+    '<div class="dialog-actions"><button class="outline" id="alternative-import" type="button">Zelf akkoorden importeren</button></div>'
+  );
+  $('search-input').value=previousQuery;
+  if($('access-code'))$('access-code').value=accessCode();
+  $('alternative-import').onclick=()=>importDialog();
+  $('search-form').onsubmit=async e=>{
+    e.preventDefault();
+    const query=$('search-input').value.trim();
+    if(query.length<2)return;
+    previousQuery=query;
+    const btn=$('search-button');
+    btn.disabled=true;btn.textContent='Akkoorden ophalen…';
+    $('dialog-error').classList.add('hidden');
+    $('search-results').textContent='';
+    try{
+      if(!available)throw new Error('Automatisch zoeken is nog niet geactiveerd. Volg de GitHub-activatiestappen om de online zoekserver te koppelen.');
+      if(isUltimateGuitarUrl(query)){
+        await retrieveChart(query,null);
+      }else{
+        const r=await api('/api/search?q='+encodeURIComponent(query));
+        const results=r.results||[];
+        if(!results.length){renderResults([]);return;}
+        renderResults(results);
+        if($('auto-first').checked){
+          const first=results.find(x=>String(x.type).toLowerCase()==='chords')||results[0];
+          await retrieveChart(first.url,first);
+        }
+      }
+    }catch(err){errorBox(err.message);}
+    finally{btn.disabled=false;btn.textContent='Zoeken en openen';}
+  };
+}
+function isUltimateGuitarUrl(value){
+  try{const u=new URL(value);return u.protocol==='https:'&&
+    (u.hostname==='ultimate-guitar.com'||u.hostname.endsWith('.ultimate-guitar.com'))&&
+    u.pathname.startsWith('/tab/');}catch{return false;}
+}
+async function api(path){
+  if(!hasOnlineSearch())throw new Error('De online zoekserver is nog niet ingesteld.');
+  const cloud=!isLocalServer();
+  const code=cloud?($('access-code')?.value?.trim()||accessCode()):'';
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),32000);
+  let response,body;
+  try{
+    response=await fetch((cloud?cloudEndpoint():'')+path,{
+      headers:{'Accept':'application/json',...(cloud&&code?{'X-Chordroom-Code':code}:{})},
+      signal:controller.signal
+    });
+    try{body=await response.json();}catch{throw new Error('De zoekserver gaf geen geldig JSON-antwoord (HTTP '+response.status+').');}
+  }catch(err){
+    throw new Error(err.name==='AbortError'?'De akkoordendienst reageert niet binnen 32 seconden.':err.message||'Verbinding met de zoekserver mislukt.');
+  }finally{clearTimeout(timeout);}
+  if(!response.ok){
+    if(response.status===401)throw new Error('Je persoonlijke toegangscode ontbreekt of is onjuist. Controleer het codeveld.');
+    throw new Error(body?.error||('Zoekserverfout ('+response.status+').'));
+  }
+  if(cloud&&code)storeAccessCode(code);
+  return body;
+}
+async function retrieveChart(url,metadata){
+  if(!isUltimateGuitarUrl(url))throw new Error('Dit is geen ondersteunde Ultimate Guitar-akkoordenlink.');
+  const existing=songs.find(s=>s.url===url);
+  if(existing){$('dialog').close();openSong(existing.id);toast('Dit nummer stond al in je bibliotheek.');return;}
+  const result=await api('/api/chart?url='+encodeURIComponent(url));
+  const song=songFromInput({
+    title:metadata?.song_name||result.title||'Onbekend nummer',
+    artist:metadata?.artist_name||result.artist||'',
+    key:result.key||metadata?.tonality||'',
+    capo:result.capo,chart:result.chart,source:'api',url
+  });
+  if(!M.uniqueChords(song.chart).length)throw new Error('Het nummer is opgehaald, maar er werden geen herkenbare akkoorden gevonden. Kies een andere versie.');
+  addSong(song);
+}
+function renderResults(rows){
+  const box=$('search-results');
+  box.textContent='';
+  if(!rows.length){box.textContent='Geen resultaten gevonden. Probeer een andere zoekterm.';return;}
+  const label=document.createElement('p');
+  label.className='result-label';
+  label.textContent='Gevonden arrangementen · kies eventueel een andere versie';
+  box.append(label);
+  for(const row of rows.slice(0,30)){
+    const item=document.createElement('div');item.className='search-result';
+    const meta=document.createElement('div');
+    const title=document.createElement('b');title.textContent=row.song_name||'Onbekend nummer';
+    const subtitle=document.createElement('span');
+    subtitle.textContent=(row.artist_name||'Onbekend')+' · versie '+(row.version||1)+' · '+(row.type||'Chords')+
+      (row.rating?' · ★ '+Number(row.rating).toFixed(1):'')+(row.votes?' ('+row.votes+' stemmen)':'');
+    meta.append(title,subtitle);
+    const button=document.createElement('button');
+    button.textContent='Open akkoorden';button.className='outline small';
+    button.onclick=async()=>{
+      button.disabled=true;button.textContent='Ophalen…';
+      $('dialog-error').classList.add('hidden');
+      try{await retrieveChart(row.url,row);}
+      catch(err){errorBox(err.message);button.disabled=false;button.textContent='Opnieuw';}
+    };
+    item.append(meta,button);box.append(item);
+  }
+}
 function exportChordpro(){const s=current();if(!s)return;const text=M.normalizeChart(s.chart);const base=text.replace(/^\s*\{(?:title|artist|key|capo):[^}]*\}\s*\n?/gim,'').trim();const header=[`{title: ${s.title}}`,s.artist?`{artist: ${s.artist}}`:'',s.key?`{key: ${s.key}}`:'',s.capo?`{capo: ${s.capo}}`:''].filter(Boolean).join('\n');const file=header+'\n\n'+base+'\n';const blob=new Blob([file],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(s.artist+' - '+s.title).replace(/[\\/:*?"<>|]/g,'').trim()+'.cho';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
 function changeTranspose(delta){transpose=Math.max(-12,Math.min(12,transpose+delta));renderWorkspace();}
 function keyboard(e){if(e.key==='Escape'&&mode){setPerformance(false);return;}if($('dialog').open||!current()||e.altKey||e.ctrlKey||e.metaKey)return;if(e.key==='ArrowUp'){e.preventDefault();changeTranspose(1);}if(e.key==='ArrowDown'){e.preventDefault();changeTranspose(-1);}if(e.key===' '){e.preventDefault();play();}}
@@ -70,6 +200,11 @@ document.querySelectorAll('[data-instrument]').forEach(b=>b.onclick=()=>{instrum
 $('text-smaller').onclick=()=>{textSize=Math.max(11,textSize-1);document.documentElement.style.setProperty('--lyrics-size',textSize+'px');savePref();};$('text-larger').onclick=()=>{textSize=Math.min(22,textSize+1);document.documentElement.style.setProperty('--lyrics-size',textSize+'px');savePref();};
 $('backup-library').onclick=()=>{const blob=new Blob([JSON.stringify({format:'chordroom-library',version:2,songs},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob);const link=document.createElement('a');link.href=u;link.download='chordroom-backup.json';link.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
 $('theme-toggle').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';savePref();};document.addEventListener('keydown',keyboard);
-if(location.protocol!=='file:' && ['127.0.0.1','localhost'].includes(location.hostname)){fetch('/api/config').then(r=>r.json()).then(v=>{$('api-status').textContent=v.app==='Chordroom'?(v.apiConfigured?'API-sleutel aanwezig':'Handmatige import beschikbaar'):'Geen Chordroom-server';}).catch(()=>{$('api-status').textContent='Handmatige import beschikbaar';});}else $('api-status').textContent='Zonder server · lokaal opgeslagen';
+if(hasOnlineSearch()){
+  fetch((isLocalServer()?'':cloudEndpoint())+'/api/config')
+    .then(r=>r.json()).then(v=>{
+      $('api-status').textContent=v.app==='Chordroom'&&v.apiConfigured?'Zoeken online beschikbaar':'Zoekserver nog niet ingesteld';
+    }).catch(()=>{$('api-status').textContent='Zoekserver tijdelijk offline';});
+}else $('api-status').textContent='Automatisch zoeken: nog instellen';
 if(!songs.length){songs=[M.demoSong()];remember();}renderLibrary();showWelcome();
 })();
