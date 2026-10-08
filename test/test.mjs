@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import vm from 'node:vm';
+import { validTabURL } from '../server.mjs';
+let successes=0;
+function test(name,fn){try{fn();successes++;console.log('✓',name);}catch(e){console.error('✗',name);throw e;}}
+const src=await fs.readFile(new URL('../public/music.js',import.meta.url),'utf8');
+const context={window:{},console};vm.runInNewContext(src,context);const M=context.window.ChordroomMusic;
+test('valid UG URL allowed',()=>assert.equal(validTabURL('https://tabs.ultimate-guitar.com/tab/oasis/wonderwall-chords-6125'),true));
+test('wrong host rejected',()=>assert.equal(validTabURL('https://tabs.ultimate-guitar.com.evil.example/tab/abc'),false));
+test('wrong route rejected',()=>assert.equal(validTabURL('https://tabs.ultimate-guitar.com/profile/123'),false));
+test('URL credentials rejected',()=>assert.equal(validTabURL('https://name:pw@tabs.ultimate-guitar.com/tab/a'),false));
+test('C to D',()=>assert.equal(M.transposeChord('C',2),'D'));
+test('Bb to C',()=>assert.equal(M.transposeChord('Bb',2),'C'));
+test('Am7 to Bm7',()=>assert.equal(M.transposeChord('Am7',2),'Bm7'));
+test('Slash chord C/E to D/F#',()=>assert.equal(M.transposeChord('C/E',2),'D/F#'));
+test('Capo 2 guitar G means piano A',()=>assert.equal(M.transposeChord('G',2),'A'));
+test('C major notes',()=>assert.equal([...M.notesForChord('C').pcs].join(','),'0,4,7'));
+test('Am7 notes',()=>assert.equal([...M.notesForChord('Am7').pcs].join(','),'9,0,4,7'));
+test('Bm7b5 half-diminished notes',()=>assert.equal([...M.notesForChord('Bm7b5').pcs].join(','),'11,2,5,9'));
+test('D/F# bass is F#',()=>assert.equal(M.notesForChord('D/F#').bassName,'F#'));
+test('Chordpro transposition',()=>assert.equal(M.convertChart('[C]Hallo [G]wereld',2),'[D]Hallo [A]wereld'));
+test('Section header is not transposed',()=>assert.equal(M.convertChart('[Chorus]\n[C]La',2),'[Chorus]\n[D]La'));
+test('UG [ch] markup converted',()=>assert.equal(M.normalizeChart('[tab][ch]Am[/ch]Yes[/tab]'),'[Am]Yes'));
+test('Chords above lyrics converted',()=>assert.ok(M.convertAboveLyrics('G      D\nHallo  daar').includes('[G]Hallo')));
+test('Chord list contains G and C',()=>assert.equal(M.uniqueChords('[G]Hallo [C]wereld').join(','),'G,C'));
+test('Malicious HTML escaped',()=>assert.equal(M.escapeText('<img>'),'&lt;img&gt;'));
+test('Demo contains chord data',()=>assert.ok(M.uniqueChords(M.demoSong().chart).length>=3));
+console.log(`\n${successes} tests geslaagd.`);
+
+// Mock the two third-party API paths without accessing Ultimate Guitar or spending credits.
+import {parseCall} from '../server.mjs';
+const originalFetch=globalThis.fetch,originalKey=process.env.PARSE_API_KEY;
+process.env.PARSE_API_KEY='OFFLINE_TEST_ONLY';
+globalThis.fetch=async (url, options)=>{
+  assert.equal(options.headers['X-API-Key'],'OFFLINE_TEST_ONLY');
+  if(String(url).endsWith('/bad'))return {ok:false,status:429,text:async()=>JSON.stringify({error:'rate limit'})};
+  const sample=String(url).includes('search_songs')?{data:{results:[{song_name:'Test Song',url:'https://tabs.ultimate-guitar.com/tab/test-song-1'}]}}:{data:{chord_chart:'[G]Example [C]text'}};
+  return {ok:true,status:200,text:async()=>JSON.stringify({status:'success',...sample})};
+};
+const r1=await parseCall('search_songs',{query:'test'});
+test('Mocked API search data parsed',()=>assert.equal(r1.data.results[0].song_name,'Test Song'));
+const r2=await parseCall('get_chord_chart',{tab_url:'https://tabs.ultimate-guitar.com/tab/test-song-1'});
+test('Mocked chart data parsed',()=>assert.equal(r2.data.chord_chart,'[G]Example [C]text'));
+const r3=await parseCall('bad',{});
+test('API HTTP 429 has understandable message',()=>assert.match(r3.error,/limiet/i));
+globalThis.fetch=originalFetch;
+if(originalKey===undefined)delete process.env.PARSE_API_KEY;else process.env.PARSE_API_KEY=originalKey;
+console.log(`\n${successes} tests geslaagd inclusief API-mocks.`);
+test('C piano ground voicing uses exact C4 E4 G4',()=>assert.equal(M.voicing('C',0).notes.join(','),'60,64,67'));
+test('C piano first inversion raises C by octave',()=>assert.equal(M.voicing('C',1).notes.join(','),'64,67,72'));
+test('C piano second inversion uses G C E',()=>assert.equal(M.voicing('C',2).notes.join(','),'67,72,76'));
+test('Seventh chords support third inversion',()=>assert.equal(M.voicing('Am7',3).notes.length,4));
+test('Keyboard shows active notes in selected inversion',()=>assert.ok(M.keyboardSVG('C','C',1).includes('aria-label="Pianotoetsen bij akkoord C"')));
+console.log(`\nEindstand: ${successes} tests geslaagd.`);

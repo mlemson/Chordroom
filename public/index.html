@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="nl" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chordroom — jouw muziekkamer</title>
+  <meta name="theme-color" content="#101218">
+  <meta name="description" content="Chordroom: een rustige muziekbibliotheek voor piano en gitaar.">
+  <link rel="stylesheet" href="styles.css">
+  <script src="music.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-icon">♮</span><span>chordroom<span class="brand-dot">.</span><small>je eigen muziekkamer</small></span></div>
+      <button id="mobile-library-toggle" class="mobile-library-toggle" aria-expanded="false">☷ Mijn nummers ▾</button>
+      <button id="new-song" class="primary sidebar-add">＋ Nieuw nummer</button>
+      <div class="sidebar-label">MIJN NUMMERS <span id="library-count">0</span></div>
+      <input id="library-filter" class="library-search" placeholder="Filter je bibliotheek" aria-label="Zoek in je bibliotheek">
+      <div id="song-list" class="song-list"></div>
+      <button id="backup-library" class="backup-library" title="Exporteer alle nummers als JSON-backup">⇩ Backup bibliotheek</button>
+      <div class="sidebar-bottom">
+        <span class="status-indicator"></span><span id="api-status">Import zonder server</span>
+        <button id="theme-toggle" class="icon-btn" title="Wissel donker/licht" aria-label="Wissel donker of licht">☼</button>
+      </div>
+    </aside>
+    <main class="content">
+      <header class="topbar">
+        <div><span class="crumb">MUZIEKBIBLIOTHEEK</span><span class="crumb-divider">/</span><strong id="crumb-title">Welkom</strong></div>
+        <div class="top-actions"><button id="open-import" class="quiet">⇩ <span>Importeren</span></button><button id="open-search" class="primary">⌕ <span>Nummer zoeken</span></button></div>
+      </header>
+      <section id="welcome" class="welcome">
+        <div class="hero-kicker">MUZIEK BEGINT HIER</div>
+        <h1>Jouw muziek.<br><em>Jouw manier.</em></h1>
+        <p>Een plek voor jouw nummers, akkoorden en piano. Importeer een akkoordenschema, speel mee en pas de toonsoort aan wanneer je wilt.</p>
+        <div class="hero-actions"><button id="welcome-search" class="primary big">Zoek een nummer <span>↗</span></button><button id="welcome-import" class="outline big">Akkoorden plakken</button></div>
+        <div class="features">
+          <div class="feature"><div class="feature-symbol">♬</div><b>Akkoorden</b><span>ChordPro en gekopieerde schema's</span></div>
+          <div class="feature"><div class="feature-symbol">♩</div><b>Piano & gitaar</b><span>Automatisch de juiste tonen</span></div>
+          <div class="feature"><div class="feature-symbol">⇵</div><b>Transponeren</b><span>Een andere toonsoort in een klik</span></div>
+        </div>
+      </section>
+      <section id="workspace" class="workspace hidden">
+        <div class="song-header"><div><div class="subtle" id="song-origin">EIGEN BIBLIOTHEEK</div><h1 id="song-title">Naam van nummer</h1><p id="song-artist">Artiest</p></div><div class="song-header-actions"><button id="edit-song" class="quiet">✎ Bewerken</button><button id="save-song" class="outline">⇩ Export .cho</button><button id="delete-song" class="quiet danger">Verwijderen</button></div></div>
+        <div class="control-panel"><div class="control-group"><span class="control-label">INSTRUMENT</span><div class="segmented"><button data-instrument="piano" class="selected">Piano</button><button data-instrument="guitar">Gitaar</button></div></div><div class="control-group"><span class="control-label">TRANSPOSEER</span><div class="stepper"><button id="transpose-down" aria-label="Halve toon lager">−</button><span id="transpose-number">0</span><button id="transpose-up" aria-label="Halve toon hoger">+</button></div></div><div class="control-group"><span class="control-label">GITAAR CAPO</span><input id="capo-number" type="number" min="0" max="12" value="0"></div><div class="control-group right"><span class="control-label">WEERGAVE</span><button id="performance-mode" class="outline small">↗ Speelmodus</button></div></div>
+        <div class="sheet-layout"><article class="sheet-card"><div class="sheet-top"><strong>Akkoordenschema</strong><div class="sheet-options"><button id="text-smaller" aria-label="Tekst verkleinen" title="Tekst verkleinen">A−</button><button id="text-larger" aria-label="Tekst vergroten" title="Tekst vergroten">A+</button><span id="sheet-meta"></span></div></div><div id="sheet-content" class="sheet-content"></div></article><aside class="piano-panel"><div class="piano-head"><div><small>INTERACTIEVE PIANO</small><h2 id="selected-chord">C</h2></div><button id="play-chord" class="round-play" aria-label="Speel akkoord">▶</button></div><p class="piano-hint">Kies een akkoord in het nummer. Probeer verschillende liggingen om vloeiender te spelen.</p><div class="voicing-controls"><span>LIGGING RECHTERHAND</span><div id="inversion-choices" class="inversion-choices" role="group" aria-label="Akkoordinversie"></div></div><div id="piano-keyboard" class="keyboard"></div><div class="notes-section"><span>RECHTERHAND</span><strong id="right-notes">C · E · G</strong></div><div class="notes-section"><span>LINKERHAND · BAS</span><strong id="left-notes">C</strong></div><div class="notes-section"><span>AKKOORDEN IN DIT NUMMER</span><div id="chord-choices" class="chord-choices"></div></div><div id="capo-tip" class="capo-tip hidden"></div></aside></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="dialog" class="dialog"><form method="dialog" class="dialog-close-form"><button value="cancel" class="close-btn" aria-label="Sluiten">×</button></form><div id="dialog-body"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
