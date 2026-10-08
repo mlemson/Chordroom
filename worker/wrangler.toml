@@ -1,0 +1,8 @@
+name = "chordroom-mlemson-chords"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# Secrets are injected by GitHub Actions, never commit values in this file.
+# PARSE_API_KEY - your provider token at parse.bot
+# CHORDROOM_ACCESS_CODE - your own private password (at least 8 chars)

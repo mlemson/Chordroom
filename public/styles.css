@@ -37,3 +37,23 @@
 .import-sources a:hover{border-color:var(--accent)}
 :root[data-theme=dark] .hero-kicker,:root[data-theme=dark] .subtle,:root[data-theme=dark] .feature-symbol{color:#e6bd84}
 @media(max-width:780px){.backup-library{display:none}.sidebar.mobile-open .backup-library{display:block}.sheet-options{justify-content:flex-start}.sheet-top{align-items:flex-start;flex-direction:column}.piano-panel{margin-bottom:50px}}
+
+
+/* Chordroom automatic search (works on narrow phone screens). */
+.search-entry{display:flex;gap:8px;align-items:stretch}
+.search-entry input{flex:1;min-width:0}
+.search-entry button{white-space:nowrap;min-width:145px}
+.api-code-wrap{margin-top:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--line);border-radius:10px}
+.api-code-wrap label{margin-top:0}
+.api-code-wrap .help{margin-bottom:0}
+.auto-choice{display:flex!important;align-items:center;gap:9px;font-size:12px!important;font-weight:500!important;margin:15px 0!important;letter-spacing:0!important}
+.auto-choice input{width:17px!important;height:17px;margin:0;accent-color:var(--accent)}
+.api-setup-warning{padding:13px;border-radius:9px;background:var(--accent-tint);color:var(--text)!important}
+.api-setup-warning a{text-decoration:underline}
+.result-label{font-size:12px!important;font-weight:700;color:var(--text)!important}
+.search-results:empty{display:none}
+@media (max-width:540px){
+  .search-entry{flex-direction:column}
+  .search-entry button{min-height:42px}
+  .search-results{max-height:36vh}
+}

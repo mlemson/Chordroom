@@ -1,6 +1,6 @@
 # Chordroom — piano, akkoorden en Ultimate Guitar-proef
 
-Een zelfstandige, lokaal draaiende demonstratie van Chordroom. **Niet** de bestaande Chordroom-website en nog **geen** productieversie. Alles werkt met Node.js 18+ zonder npm-installatie.
+Chordroom voor piano en gitaar, met GitHub Pages en een optionele lokale Node.js-server.
 
 ## Direct starten (Windows)
 1. Pak de ZIP volledig uit in een map.
@@ -43,8 +43,42 @@ API-routes: `GET /api/config`, `GET /api/search?q=...`, `GET /api/chart?url=...`
 ## API-fout onderzoeken
 Dubbelklik `diagnose-api.bat`. Dit controleert Node.js, of de sleutel is ingesteld, een zoekopdracht en vervolgens het ophalen van een akkoordenschema. Een succesvolle diagnose bevestigt daadwerkelijke toegang vanaf jouw pc; de offline tests doen dat niet. **Let op:** bij een aanwezige sleutel kunnen beide testverzoeken API-credits verbruiken. Deel nooit je sleutel in een foutmelding of screenshot.
 
-## GitHub Pages / zonder server
-Open `public/index.html` direct of plaats de inhoud van de map `public/` op GitHub Pages (bijvoorbeeld in `docs/`). Import, pianoweergave, transponeren en opslag blijven werken. De Ultimate Guitar API is bewust niet beschikbaar op een openbare statische website: een API-sleutel mag nooit in JavaScript aan bezoekers worden gestuurd. Gebruik voor automatische API-import een lokale of aparte private backend.
+
+## Automatisch online akkoorden zoeken
+
+Chordroom kan artiest en nummer automatisch zoeken, de beste akkoordenschema's ophalen en meteen op piano of gitaar tonen. Het werkt na eenmalige activering van de online zoekserver op GitHub Pages. Ook directe Ultimate Guitar-tablinks worden ondersteund.
+
+### Eenmalig activeren: vier repository secrets
+
+GitHub Pages kan geen geheime sleutels bewaren. Chordroom heeft daarom een kleine Cloudflare Worker. De app wordt automatisch gekoppeld na een geslaagde GitHub Actions-run.
+
+1. Maak een persoonlijke API-sleutel op https://parse.bot/marketplace/79815618-69fa-404a-a63a-5b743e000b07/ultimate-guitar-com-api . Deze onofficiële dienst heeft beperkte gratis credits.
+2. Maak een Cloudflare-account op https://dash.cloudflare.com/sign-up en activeer indien nodig het workers.dev-subdomein.
+3. Zoek je Cloudflare Account ID en maak onder API Tokens een token met de template Edit Cloudflare Workers, beperkt tot je eigen account.
+4. Open https://github.com/mlemson/Chordroom/settings/secrets/actions en voeg de volgende **vier repository secrets** toe:
+
+| Secretnaam | Waarde |
+| --- | --- |
+| PARSE_API_KEY | Je persoonlijke Parse API-sleutel |
+| CLOUDFLARE_ACCOUNT_ID | Je Cloudflare Account ID |
+| CLOUDFLARE_API_TOKEN | Cloudflare API-token met Workers-rechten |
+| CHORDROOM_ACCESS_CODE | Zelfgekozen persoonlijke code van minimaal 8 tekens |
+
+5. Open https://github.com/mlemson/Chordroom/actions/workflows/static.yml en kies **Run workflow** op **main**. De workflow test de app, publiceert de Worker en schrijft uitsluitend de **publieke backend-URL** in de GitHub Pages-site. De sleutels blijven geheim.
+6. Ga naar https://mlemson.github.io/Chordroom/ . Kies **Nummer zoeken**, vul bijvoorbeeld **Coldplay Yellow** en je **persoonlijke toegangscode** in. Laat **Beste akkoordenversie direct openen** aangevinkt om het gevonden akkoordenschema meteen automatisch te laden.
+
+De persoonlijke toegangscode wordt in de browser alleen gedurende de sessie bewaard. Bij gebruik op een ander apparaat vul je de code opnieuw in. Zonder de vier secrets blijft online zoeken inactief. Deel **nooit** de geheimen of schermafbeeldingen ervan.
+
+### Als automatisch zoeken niet werkt
+
+- **Automatisch zoeken: nog instellen**: de Worker is niet gekoppeld; controleer of alle secrets bestaan en voer de workflow opnieuw uit.
+- **Toegangscode onjuist**: controleer de waarde van CHORDROOM_ACCESS_CODE.
+- **Geen credits / 429**: Parse heeft onvoldoende tegoed of een tijdelijke limiet.
+- **Netwerkfout**: Cloudflare, Parse of Ultimate Guitar kan tijdelijk niet bereikbaar zijn. Kijk in GitHub Actions naar de deploymentstatus.
+- Bij **alternatieve uitvoeringen** kun je het automatisch openen uitvinken en één van de resultaten kiezen.
+- Voor **lokaal gebruik** volstaat nog steeds de bestaande Node-server met PARSE_API_KEY in een privé .env-bestand.
+
+Deze toepassing gebruikt een experimentele, onofficiële Ultimate Guitar-bron. Toegang, voorwaarden en beschikbaarheid kunnen veranderen. Het gebruiken of herpubliceren van songteksten en arrangementen kan auteursrechtelijk beperkt zijn. Gebruik materiaal waarvoor je rechten hebt en publiceer het niet zomaar door.
 
 ## Nieuwe functies v2
 - Standaard dark mode met wissel naar licht en onthouden voorkeur.
