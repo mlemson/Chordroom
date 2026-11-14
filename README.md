@@ -86,3 +86,19 @@ Deze toepassing gebruikt een experimentele, onofficiële Ultimate Guitar-bron. T
 - Bibliotheek-JSON-backup downloaden (voor handmatige bewaring).
 - Server start op automatisch vrije poort; `PORT=...` blijft mogelijk voor experts.
 - De bibliotheek is browsergebonden en niet gesynchroniseerd.
+
+
+## Piano Studio (experimenteel)
+
+De nieuwe interactieve pianomodus is beschikbaar via de knop **Piano Studio** in de bibliotheek, of direct op `/piano.html`.
+
+- Vallende noten, visueel klavier, afspeelsnelheid 50–125%, pauze, herstart en tijdlijn.
+- **Wacht op mij** pauzeert bij de volgende noot tot je deze zelf speelt. Schakel dit uit om de oefening in eigen tempo af te spelen (eenvoudig synthesizergeluid).
+- Speel via een USB/Bluetooth MIDI-keyboard (op ondersteunde browsers), via de toetsen A S D F G H J K L, of via de virtuele toetsen op het scherm.
+- De microfoonfunctie probeert **één toon tegelijk** te herkennen (experimenteel). Complexe pianoakkoorden worden hiermee niet betrouwbaar herkend.
+- Importeer een `.mid` of `.midi`-bestand. Het bestand wordt lokaal in de browser geanalyseerd, met ondersteuning voor meerdere MIDI-sporen en tempoveranderingen. Bij meerdere sporen kies je een instrument-/pianospoor. Er is geen account, server of handmatige noteninvoer nodig.
+- Probeer vooraf ingevulde oefeningen, zoals *Ode aan de vreugde*.
+
+**Beperkingen van deze eerste versie:** de notenbaan toont C3 tot en met B5 (noten buiten dat bereik worden niet weergegeven); één MIDI-spoor kan handmatig worden gekozen wanneer meerdere sporen aanwezig zijn; microfoondetectie is niet geschikt voor complete opnames of polyfone stukken; automatische audio-naar-MIDI-analyse, publieke liedjescatalogus en leerlevels moeten nog worden toegevoegd. Spotify-streams worden **niet** gelezen, gedownload of gesynchroniseerd; dat past niet bij de Spotify API/developer rules. Voor automatische audioherkenning is de latere route een audio-bestand met toestemming verwerken via bijvoorbeeld het open-source **Basic Pitch** of een gespecialiseerde pianotranscriptie-engine.
+
+De oorspronkelijke Chordroom-bibliotheek blijft beschikbaar en de nieuwe pagina is onafhankelijk van de onofficiële Ultimate Guitar API.
