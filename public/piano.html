@@ -27,6 +27,12 @@ canvas{display:block;width:100%;height:420px;touch-action:manipulation}
 .helpgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}.tip{padding:17px}.tip strong{display:block;margin-bottom:7px}.tip p{font-size:13px;line-height:1.55}.tip code{color:#8ceee3}
 .note{margin-top:16px;padding:12px 15px;border-left:3px solid var(--violet);background:#131c30;color:#aebdda;border-radius:5px;font-size:13px}
 .sr{position:absolute;left:-9999px}.notice{color:#ffd9a4}
+.analysis{margin:0 16px 16px;background:#0d2535;border:1px solid #2f6276;border-radius:12px;padding:12px 14px}
+.analysis[hidden]{display:none}.analysis header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#cbf5f1;font-size:13px}
+.analysis progress{display:block;width:100%;height:9px;accent-color:var(--teal);margin-top:9px}
+.analysis small{display:block;margin-top:7px;color:#a9c2d8}
+.field.wide{min-width:175px}.btn[disabled],select[disabled]{opacity:.55;cursor:wait}
+
 @media(max-width:820px){.helpgrid{grid-template-columns:1fr}.hero{padding:17px 0}.toolbar .field{flex:1;min-width:130px}.stage{margin:0 7px 9px}canvas{height:380px}.shell{padding:11px 8px 28px}.playline,.transport{padding-left:10px;padding-right:10px}.top{padding:6px 7px 15px}.toolbar{padding:12px}.btn{min-height:44px}}
 </style>
 </head>
@@ -43,8 +49,15 @@ canvas{display:block;width:100%;height:420px;touch-action:manipulation}
    <div class="field" id="trackWrap" hidden><label for="track">MIDI-spoor</label><select id="track"></select></div>
    <div class="field"><label for="speed">Snelheid</label><select id="speed"><option value=".5">50% · rustig</option><option value=".75" selected>75%</option><option value="1">100%</option><option value="1.25">125%</option></select></div>
    <label class="btn" for="file">↑ Importeer MIDI <input class="sr" type="file" id="file" accept=".mid,.midi,audio/midi,audio/x-midi"></label>
+   <label class="btn" for="audioFile" id="audioLabel">✨ Audio → noten (AI) <input class="sr" type="file" id="audioFile" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac"></label>
+   <div class="field wide"><label for="analysisLength">Audiofragment analyseren</label><select id="analysisLength"><option value="30">Eerste 30 seconden</option><option value="60" selected>Eerste minuut</option><option value="120">Eerste 2 minuten</option><option value="180">Eerste 3 minuten</option></select></div>
    <button class="btn" id="midiBtn" type="button">♬ MIDI-keyboard</button>
    <button class="btn" id="micBtn" type="button">🎙 Microfoon</button>
+ </div>
+ <div class="analysis" id="analysisPanel" hidden role="status" aria-live="polite">
+   <header><strong id="analysisMessage">Audio voorbereiden…</strong><span id="analysisPercent">0%</span></header>
+   <progress id="analysisProgress" max="100" value="0" aria-label="Voortgang audioherkenning"></progress>
+   <small id="analysisDetail">Het bestand blijft op dit apparaat. Er wordt niets naar Chordroom verzonden.</small>
  </div>
  <div class="playline"><button class="btn primary" id="play">▶ Start</button><button class="btn" id="restart">↺ Herstart</button><label class="switch"><input type="checkbox" id="wait" checked> Wacht op mij</label><span class="small" id="assist">Speel de oplichtende toets om verder te gaan.</span></div>
  <div class="stage"><canvas id="roll" tabindex="0" aria-label="Interactieve notenbaan en aanraakbaar pianoklavier"></canvas><div class="overlay"><span class="pill" id="feedback">Speel de eerste noot</span><span class="pill" id="progress">0 juiste noten</span></div></div>
@@ -55,7 +68,7 @@ canvas{display:block;width:100%;height:420px;touch-action:manipulation}
  <section class="panel tip"><strong>02 · Speel zelf</strong><p>Een MIDI-keyboard is het nauwkeurigst. Je kunt ook met de muis/toetsen op het scherm spelen, of via je computer de toetsen <code>A S D F G H J K L</code> gebruiken.</p></section>
  <section class="panel tip"><strong>03 · Laat Chordroom luisteren</strong><p>Microfoonherkenning is voorlopig experimenteel en gericht op <b>één duidelijke noot tegelijk</b>. Gebruik liefst een koptelefoon. Complexe akkoorden en meerdere instrumenten vereisen later AI-transcriptie.</p></section>
 </div>
-<div class="note">Dit is de eerste Piano Studio, geen Spotify-koppeling. Spotify-streams kunnen niet zomaar worden uitgelezen of met een oefenvisualisatie worden gesynchroniseerd. De volgende stap is <b>automatisch bestaande partituren zoeken</b> en <b>AI-transcriptie van eigen audiobestanden</b>; die functies zijn in dit prototype nog niet actief.</div>
+<div class="note">Dit is de eerste Piano Studio, geen Spotify-koppeling. Spotify-streams kunnen niet zomaar worden uitgelezen of met een oefenvisualisatie worden gesynchroniseerd. Je kunt nu ook <b>een eigen geluidsbestand met Basic Pitch analyseren</b>. Dit gebeurt lokaal op je apparaat; alleen het AI-model wordt bij het eerste gebruik geladen. Het werkt het best met <b>duidelijk hoorbare solo-piano</b>. Bij zang, drums en meerdere instrumenten kan de AI verkeerde of ontbrekende noten tonen. Analyseer om je apparaat te ontzien maximaal de eerste drie minuten. Automatisch partituren zoeken is nog niet ingebouwd.</div>
 </div>
 <script>
 (() => {
