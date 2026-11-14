@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a1120">
+<title>Piano Studio · Chordroom</title>
+<style>
+:root{color-scheme:dark;--bg:#090f1d;--card:#131f33;--muted:#9daec7;--ink:#eef6ff;--teal:#39dfce;--violet:#aa8bff;--line:#304158}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 70% -20%,#233766 0,#0a1223 42%,var(--bg) 80%);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select{font:inherit}button,select{cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+a{color:var(--teal);text-decoration:none}a:hover{text-decoration:underline}
+.shell{width:min(1340px,100%);margin:auto;padding:20px clamp(12px,3vw,32px) 42px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.brand{font-weight:800;font-size:19px;letter-spacing:-.04em}.brand span{color:var(--teal)}.top small{color:var(--muted)}
+.eyebrow{font-size:11px;color:var(--teal);font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+.hero{display:flex;justify-content:space-between;align-items:end;gap:16px;padding:24px 0 22px;flex-wrap:wrap}h1{font-size:clamp(27px,4vw,42px);margin:3px 0 7px;letter-spacing:-.045em;line-height:1.1}p{margin:0;color:var(--muted)}.hero p{max-width:660px}
+.status{color:#a9f2e5;background:#143139;border:1px solid #22625d;border-radius:50px;padding:7px 13px;font-size:12px}
+.panel{border:1px solid #2c3955;border-radius:20px;background:linear-gradient(150deg,#17233a,#101a2b);box-shadow:0 15px 35px #0003}
+.toolbar{display:flex;flex-wrap:wrap;gap:13px;padding:16px;align-items:end}.field{display:flex;flex-direction:column;gap:5px;min-width:145px}.field label{font-size:12px;color:#bdcee5}select,.btn{min-height:41px;border:1px solid #394c69;border-radius:10px;background:#101c30;color:var(--ink);padding:8px 12px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:background .15s}.btn:hover{background:#203353}.primary{background:var(--teal);color:#09232a;border-color:var(--teal);font-weight:800}.primary:hover{background:#91eee3}
+.toolbar .grow{flex:1}.playline{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 16px 15px}.playline .small{color:var(--muted);font-size:12px}
+.stage{position:relative;margin:0 12px 12px;background:linear-gradient(180deg,#0a1224,#111a2d);border:1px solid #30445e;border-radius:13px;overflow:hidden}
+canvas{display:block;width:100%;height:420px;touch-action:manipulation}
+.overlay{position:absolute;top:12px;left:12px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}.pill{border-radius:24px;background:#101b31e8;border:1px solid #3c5173;padding:5px 10px;color:#dce9ff;font-size:12px}.pill.good{border-color:#339b88;color:#77ffe1}
+.transport{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:0 16px 16px}.transport input[type=range]{flex:1;min-width:130px;accent-color:var(--teal)}.clock{font-variant-numeric:tabular-nums;color:#d0e2f8;font-size:13px;white-space:nowrap}
+.switch{display:inline-flex;align-items:center;gap:7px;user-select:none;color:#daeaff}.switch input{accent-color:var(--teal);width:18px;height:18px}
+.helpgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}.tip{padding:17px}.tip strong{display:block;margin-bottom:7px}.tip p{font-size:13px;line-height:1.55}.tip code{color:#8ceee3}
+.note{margin-top:16px;padding:12px 15px;border-left:3px solid var(--violet);background:#131c30;color:#aebdda;border-radius:5px;font-size:13px}
+.sr{position:absolute;left:-9999px}.notice{color:#ffd9a4}
+@media(max-width:820px){.helpgrid{grid-template-columns:1fr}.hero{padding:17px 0}.toolbar .field{flex:1;min-width:130px}.stage{margin:0 7px 9px}canvas{height:380px}.shell{padding:11px 8px 28px}.playline,.transport{padding-left:10px;padding-right:10px}.top{padding:6px 7px 15px}.toolbar{padding:12px}.btn{min-height:44px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="top"><div class="brand"><span>♫</span> Chordroom <small>/ Piano Studio</small></div><a href="./index.html">← Terug naar bibliotheek</a></header>
+<section class="hero">
+ <div><div class="eyebrow">Interactief oefenen · prototype</div><h1>Leer door écht te spelen.</h1><p>Noten komen naar je toe. Speel op een aangesloten piano, gebruik de microfoon of probeer je computertoetsenbord. Importeer een MIDI-bestand: de notenbaan wordt automatisch opgebouwd.</p></div>
+ <div class="status" id="deviceStatus" role="status">● Klaar om te oefenen</div>
+</section>
+<main class="panel">
+ <div class="toolbar">
+   <div class="field grow"><label for="song">Oefening</label><select id="song"><option value="ode">Ode aan de vreugde · melodie</option><option value="steps">Eerste stappen · eigen oefening</option><option value="chords">Akkoorden oefenen · C–Am–F–G</option></select></div>
+   <div class="field" id="trackWrap" hidden><label for="track">MIDI-spoor</label><select id="track"></select></div>
+   <div class="field"><label for="speed">Snelheid</label><select id="speed"><option value=".5">50% · rustig</option><option value=".75" selected>75%</option><option value="1">100%</option><option value="1.25">125%</option></select></div>
+   <label class="btn" for="file">↑ Importeer MIDI <input class="sr" type="file" id="file" accept=".mid,.midi,audio/midi,audio/x-midi"></label>
+   <button class="btn" id="midiBtn" type="button">♬ MIDI-keyboard</button>
+   <button class="btn" id="micBtn" type="button">🎙 Microfoon</button>
+ </div>
+ <div class="playline"><button class="btn primary" id="play">▶ Start</button><button class="btn" id="restart">↺ Herstart</button><label class="switch"><input type="checkbox" id="wait" checked> Wacht op mij</label><span class="small" id="assist">Speel de oplichtende toets om verder te gaan.</span></div>
+ <div class="stage"><canvas id="roll" tabindex="0" aria-label="Interactieve notenbaan en aanraakbaar pianoklavier"></canvas><div class="overlay"><span class="pill" id="feedback">Speel de eerste noot</span><span class="pill" id="progress">0 juiste noten</span></div></div>
+ <div class="transport"><span class="clock" id="clock">0:00 / 0:00</span><input type="range" min="0" max="1000" value="0" id="seek" aria-label="Positie in nummer"><span class="clock" id="nowNote">Volgende: —</span></div>
+</main>
+<div class="helpgrid">
+ <section class="panel tip"><strong>01 · Kies een liedje</strong><p>De voorbeeldlessen staan al klaar. Met <b>Importeer MIDI</b> wordt een MIDI-bestand automatisch omgezet naar een oefening. Selecteer eventueel het pianospelende spoor.</p></section>
+ <section class="panel tip"><strong>02 · Speel zelf</strong><p>Een MIDI-keyboard is het nauwkeurigst. Je kunt ook met de muis/toetsen op het scherm spelen, of via je computer de toetsen <code>A S D F G H J K L</code> gebruiken.</p></section>
+ <section class="panel tip"><strong>03 · Laat Chordroom luisteren</strong><p>Microfoonherkenning is voorlopig experimenteel en gericht op <b>één duidelijke noot tegelijk</b>. Gebruik liefst een koptelefoon. Complexe akkoorden en meerdere instrumenten vereisen later AI-transcriptie.</p></section>
+</div>
+<div class="note">Dit is de eerste Piano Studio, geen Spotify-koppeling. Spotify-streams kunnen niet zomaar worden uitgelezen of met een oefenvisualisatie worden gesynchroniseerd. De volgende stap is <b>automatisch bestaande partituren zoeken</b> en <b>AI-transcriptie van eigen audiobestanden</b>; die functies zijn in dit prototype nog niet actief.</div>
+</div>
+<script>
+(() => {
+'use strict';
+const $=id=>document.getElementById(id);
+const canvas=$('roll'), ctx=canvas.getContext('2d'), minPitch=48, maxPitch=83;
+const whites=[], pitchPos=new Map(), nameOf=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+for(let n=minPitch;n<=maxPitch;n++)if(![1,3,6,8,10].includes(n%12))whites.push(n);
+for(let i=0;i<whites.length;i++)pitchPos.set(whites[i],i);
+for(let n=minPitch;n<=maxPitch;n++)if(!pitchPos.has(n))pitchPos.set(n,pitchPos.get(n-1)+.68);
+let notes=[], allNotes=[], importedTracks=[],duration=0,position=0,speed=.75,playing=false,waiting=true,awaiting=null,expected=[],pressed=new Map(),hit=new Set(),lastFrame=0,liveTimer=0,audioCtx=null,micStream=null,micAnalyser=null,micActive=false,midiAccess=null,updateUiLast=0;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function noteName(n){return nameOf[n%12]+(Math.floor(n/12)-1)}
+function makeMelody(sequence,bpm){let t=.6,d=60/bpm;return sequence.map((p,i)=>({note:p,start:t+i*d,end:t+i*d*.86,track:0,id:i}))}
+function makeDemo(which){
+ let a=[];
+ if(which==='ode'){
+  const line=[64,64,65,67,67,65,64,62,60,60,62,64,64,62,62,64,64,65,67,67,65,64,62,60,60,62,64,62,60,60];
+  a=makeMelody(line,112);
+ }else if(which==='steps'){
+  a=makeMelody([60,62,64,65,67,65,64,62,60,60,64,67,72,67,64,60],86);
+ }else{
+  let t=.6,groups=[[48,60,64,67],[45,57,60,64],[53,60,65,69],[55,59,62,67]];
+  for(let round=0;round<2;round++)for(let group of groups){group.forEach(n=>a.push({note:n,start:t,end:t+1.35,track:0,id:a.length}));t+=1.75}
+ }
+ loadNotes(a,which);
+}
+function loadNotes(items,label){
+ playing=false;awaiting=null;expected=[];hit.clear();
+ notes=items.filter(n=>n.note>=minPitch&&n.note<=maxPitch).sort((a,b)=>a.start-b.start||a.note-b.note).map((n,i)=>({...n,id:i}));
+ duration=notes.length?Math.max(...notes.map(n=>n.end))+.7:0;
+ position=0;refresh();$('play').textContent='▶ Start';
+ feedback(notes.length?'Klaar: '+notes.length+' noten':'Geen noten in het zichtbare bereik');
+ if(!notes.length)$('deviceStatus').textContent='Geen pianonoten gevonden';
+}
+function feedback(s,good=false){$('feedback').textContent=s;$('feedback').classList.toggle('good',good)}
+function getAudio(){audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx}
+function sound(n){
+ try{
+ const a=getAudio(),now=a.currentTime,osc=a.createOscillator(),gain=a.createGain();
+ osc.type='triangle';osc.frequency.value=440*Math.pow(2,(n-69)/12);
+ gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.1,now+.016);gain.gain.exponentialRampToValueAtTime(.0001,now+.65);
+ osc.connect(gain).connect(a.destination);osc.start(now);osc.stop(now+.7);
+ }catch(e){$('deviceStatus').textContent='Audio niet beschikbaar'}
+}
+function start(){
+ if(!notes.length)return;
+ try{getAudio()}catch(e){}
+ if(position>=duration-.01){position=0;hit.clear()}
+ playing=!playing;$('play').textContent=playing?'Ⅱ Pauze':'▶ Start';lastFrame=performance.now();
+ if(playing){feedback('Speel de aangegeven noten');checkAwaiting()}
+}
+function restart(){position=0;playing=false;awaiting=null;expected=[];hit.clear();$('play').textContent='▶ Start';feedback('Opnieuw beginnen');refresh()}
+function groupAt(t){return notes.filter(n=>Math.abs(n.start-t)<.045)}
+function checkAwaiting(){
+ if(!waiting||awaiting||!playing)return;
+ const next=notes.find(n=>n.start>=position-.025&&!hit.has(n.id));
+ if(next&&next.start<=position+.025){
+   position=next.start;awaiting=next.start;expected=groupAt(next.start);
+   feedback('Jij bent aan zet: '+expected.map(n=>noteName(n.note)).join(' · '));
+ }
+}
+function playerNote(n,source){
+ if(!Number.isFinite(n))return;
+ pressed.set(n,performance.now()+250);
+ if(source!=='mic')sound(n);
+ let candidates=awaiting!==null?expected:notes.filter(k=>Math.abs(k.start-position)<.28);
+ let match=candidates.find(k=>k.note===n&&!hit.has(k.id));
+ if(match){
+  hit.add(match.id);feedback('✓ Goed gespeeld: '+noteName(n),true);
+  if(awaiting!==null&&expected.every(k=>hit.has(k.id))){awaiting=null;expected=[]}
+ }else if(playing){feedback('Je speelde '+noteName(n)+' · kijk naar de oplichtende toetsen')}
+ refresh();
+}
+function tick(timestamp){
+ const dt=Math.min((timestamp-lastFrame)/1000,.075);lastFrame=timestamp;
+ if(playing&&awaiting===null){
+  let old=position;position=clamp(position+dt*speed,0,duration);
+  if(waiting)checkAwaiting();
+  else {
+   for(let n of notes)if(n.start>old&&n.start<=position&&n.note>=minPitch){sound(n.note)}
+  }
+  if(position>=duration){playing=false;$('play').textContent='▶ Opnieuw';feedback('Les afgerond: '+hit.size+' / '+notes.length+' noten',true)}
+ }
+ draw();
+ if(timestamp-updateUiLast>100){refresh();updateUiLast=timestamp}
+ requestAnimationFrame(tick);
+}
+function refresh(){
+ $('clock').textContent=fmt(position)+' / '+fmt(duration);
+ $('seek').value=duration?Math.round(position/duration*1000):0;
+ $('progress').textContent=hit.size+' / '+notes.length+' juist';
+ const next=notes.find(n=>n.start>=position-.035&&!hit.has(n.id));
+ $('nowNote').textContent='Volgende: '+(next?noteName(next.note):'—');
+}
+function fmt(t){return Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')}
+function layout(){
+ let rect=canvas.getBoundingClientRect(),w=rect.width,h=rect.height,kw=w/whites.length,kTop=h-116;
+ return {w,h,kw,kTop};
+}
+function keyX(n,kw){return pitchPos.get(n)*kw}
+function draw(){
+ const {w,h,kw,kTop}=layout(),dpr=Math.min(devicePixelRatio||1,2);
+ if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr)}
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ const background=ctx.createLinearGradient(0,0,0,h);background.addColorStop(0,'#0b1529');background.addColorStop(1,'#1b2443');ctx.fillStyle=background;ctx.fillRect(0,0,w,h);
+ ctx.fillStyle='#13354c';ctx.fillRect(0,kTop-2,w,3);
+ const span=3.8,scale=(kTop-8)/span;
+ for(let i=0;i<whites.length;i++){const x=i*kw;ctx.fillStyle=i%2?'#101e34':'#122138';ctx.fillRect(x,0,kw,kTop);ctx.strokeStyle='#233856';ctx.strokeRect(x,0,kw,kTop)}
+ for(let n of notes){
+  let y=kTop-(n.start-position)*scale,ny=kTop-(n.end-position)*scale;
+  if(y< -200||ny>kTop+16)continue;
+  const black=[1,3,6,8,10].includes(n.note%12),x=keyX(n.note,kw)+(black?kw*.08:kw*.11),width=black?kw*.55:kw*.77;
+  const top=Math.max(-6,ny),bottom=Math.min(kTop,y),height=Math.max(5,bottom-top);
+  if(bottom<0)continue;
+  ctx.fillStyle=hit.has(n.id)?'#6d8ca0':(n.note%12<5?'#38e0d1':'#a388ff');ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=hit.has(n.id)?0:10;
+  ctx.beginPath();ctx.roundRect(x,top,width,height,Math.min(5,width/4));ctx.fill();ctx.shadowBlur=0;
+ }
+ ctx.strokeStyle='#78e6e3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,kTop);ctx.lineTo(w,kTop);ctx.stroke();
+ // white keys
+ for(let i=0;i<whites.length;i++){
+ const n=whites[i],x=i*kw,isActive=(pressed.get(n)||0)>performance.now(),isExpected=expected.some(t=>t.note===n);
+ ctx.fillStyle=isActive?'#34dfcc':isExpected?'#a3f4eb':'#edf4fa';ctx.fillRect(x+.6,kTop+2,kw-1.2,h-kTop-3);
+ ctx.strokeStyle='#788da9';ctx.strokeRect(x+.6,kTop+2,kw-1.2,h-kTop-3);
+ if(kw>24&&n%12===0){ctx.fillStyle='#526780';ctx.font='10px system-ui';ctx.fillText(noteName(n),x+3,h-9)}
+ }
+ // black keys
+ for(let n=minPitch;n<=maxPitch;n++)if([1,3,6,8,10].includes(n%12)){
+ const x=keyX(n,kw),isActive=(pressed.get(n)||0)>performance.now(),isExpected=expected.some(t=>t.note===n);
+ ctx.fillStyle=isActive?'#32cdbd':isExpected?'#8466e9':'#17243b';ctx.fillRect(x,kTop+2,kw*.69,(h-kTop)*.58);
+ ctx.strokeStyle='#43536c';ctx.strokeRect(x,kTop+2,kw*.69,(h-kTop)*.58)
+ }
+}
+function atCanvasPitch(event){
+ const b=canvas.getBoundingClientRect(),x=event.clientX-b.left,y=event.clientY-b.top,lay=layout();
+ if(y<lay.kTop)return null;
+ // prefer black key while finger is on black area
+ if(y<lay.kTop+(lay.h-lay.kTop)*.60){
+  for(let n=minPitch;n<=maxPitch;n++)if([1,3,6,8,10].includes(n%12)){
+   let kx=keyX(n,lay.kw);if(x>=kx&&x<=kx+lay.kw*.69)return n
+  }
+ }
+ let index=clamp(Math.floor(x/lay.kw),0,whites.length-1);return whites[index]
+}
+canvas.addEventListener('pointerdown',e=>{const n=atCanvasPitch(e);if(n!==null)playerNote(n,'touch')});
+const keys={'a':60,'s':62,'d':64,'f':65,'g':67,'h':69,'j':71,'k':72,'l':74,'w':61,'e':63,'t':66,'y':68,'u':70,'o':73};
+document.addEventListener('keydown',e=>{if(e.repeat||e.target.matches('input,select,button,textarea'))return;if(keys[e.key.toLowerCase()]!==undefined){e.preventDefault();playerNote(keys[e.key.toLowerCase()],'keyboard')}else if(e.code==='Space'){e.preventDefault();start()}});
+$('play').addEventListener('click',start);$('restart').addEventListener('click',restart);
+$('wait').addEventListener('change',e=>{waiting=e.target.checked;if(!waiting){awaiting=null;expected=[];feedback('Vrije speelmodus')}});
+$('speed').addEventListener('change',e=>{speed=Number(e.target.value)});
+$('seek').addEventListener('input',e=>{position=duration*Number(e.target.value)/1000;awaiting=null;expected=[];hit.clear();feedback('Nieuwe startpositie gekozen')});
+$('song').addEventListener('change',e=>{
+ if(e.target.value==='import'){loadImported()}else makeDemo(e.target.value);
+});
+async function midiConnect(){
+ if(!navigator.requestMIDIAccess){$('deviceStatus').textContent='Web MIDI niet ondersteund in deze browser';return}
+ try{
+ midiAccess=await navigator.requestMIDIAccess();
+ let count=0;
+ for(let input of midiAccess.inputs.values()){
+  count++;input.onmidimessage=e=>{const [s,n,v]=e.data;if((s&0xf0)===0x90&&v>0)playerNote(n,'midi')}
+ }
+ $('deviceStatus').textContent=count?'✓ '+count+' MIDI-apparaat/apparaten verbonden':'MIDI-toegang toegestaan · sluit een keyboard aan';
+ midiAccess.onstatechange=()=>{for(let input of midiAccess.inputs.values())input.onmidimessage=e=>{const [s,n,v]=e.data;if((s&0xf0)===0x90&&v>0)playerNote(n,'midi')}};
+ }catch(e){$('deviceStatus').textContent='MIDI-toegang niet beschikbaar'}
+}
+$('midiBtn').addEventListener('click',midiConnect);
+// Conservative single-pitch autocorrelation: no claims of reliable polyphonic transcription.
+function pitchFromBuffer(buf,sampleRate){
+ let rms=0;for(let i=0;i<buf.length;i+=2)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/(buf.length/2));if(rms<.018)return null;
+ const low=Math.floor(sampleRate/1000),high=Math.min(Math.floor(sampleRate/110),buf.length/3);let best=0,bestScore=.75;
+ for(let lag=low;lag<=high;lag++){
+  let sum=0,aa=0,bb=0;
+  for(let i=0;i<buf.length-lag;i+=4){sum+=buf[i]*buf[i+lag];aa+=buf[i]*buf[i];bb+=buf[i+lag]*buf[i+lag]}
+  let score=sum/Math.sqrt(aa*bb||1);
+  if(score>bestScore){bestScore=score;best=lag}
+ }
+ if(!best)return null;let pitch=69+12*Math.log2((sampleRate/best)/440);return clamp(Math.round(pitch),0,127)
+}
+let micLast=null,micStable=0,micSent=0;
+async function toggleMic(){
+ if(micActive){micActive=false;micStream?.getTracks().forEach(t=>t.stop());micStream=null;$('micBtn').textContent='🎙 Microfoon';$('deviceStatus').textContent='Microfoon uit';return}
+ try{
+  let a=getAudio();micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  const source=a.createMediaStreamSource(micStream);micAnalyser=a.createAnalyser();micAnalyser.fftSize=4096;source.connect(micAnalyser);
+  micActive=true;$('micBtn').textContent='■ Stop microfoon';$('deviceStatus').textContent='Microfoon actief · probeer losse noten';
+  listenMic();
+ }catch(e){$('deviceStatus').textContent='Geen microfoontoegang (gebruik HTTPS of localhost)'}
+}
+function listenMic(){
+ if(!micActive)return;
+ let a=getAudio(),data=new Float32Array(micAnalyser.fftSize);micAnalyser.getFloatTimeDomainData(data);
+ let pitch=pitchFromBuffer(data,a.sampleRate);
+ if(pitch===micLast){micStable++}else{micLast=pitch;micStable=1}
+ if(pitch!==null&&micStable>=3&&performance.now()-micSent>380){micSent=performance.now();playerNote(pitch,'mic')}
+ setTimeout(listenMic,85);
+}
+$('micBtn').addEventListener('click',toggleMic);
+// Standard MIDI File parser: formats 0/1, PPQ timing and global tempo changes.
+function parseMidi(buffer){
+ let b=new Uint8Array(buffer),i=0;
+ const u16=()=>{let n=b[i]*256+b[i+1];i+=2;return n};
+ const u32=()=>{let n=b[i]*16777216+b[i+1]*65536+b[i+2]*256+b[i+3];i+=4;return n};
+ const str=n=>{let s='';for(let k=0;k<n;k++)s+=String.fromCharCode(b[i++]);return s};
+ const vlq=()=>{let v=0,z;do{if(i>=b.length)throw Error('Onvolledig MIDI-bestand');z=b[i++];v=(v<<7)|(z&127)}while(z&128);return v};
+ if(str(4)!=='MThd')throw Error('Geen geldig MIDI-bestand');
+ let headerLen=u32();if(headerLen<6)throw Error('MIDI-header onjuist');
+ let format=u16(),nTracks=u16(),division=u16();i+=headerLen-6;
+ if(format>1||division&0x8000)throw Error('Dit MIDI-tijdformaat wordt nog niet ondersteund');
+ let tempos=[{tick:0,us:500000}],events=[],tracks=[];
+ for(let tr=0;tr<nTracks;tr++){
+  if(str(4)!=='MTrk')throw Error('MIDI-spoor niet gevonden');
+  let end=i+u32(),tick=0,running=0,active=new Map(),title='Spoor '+(tr+1),program=null,trackNotes=0;
+  if(end>b.length)throw Error('MIDI-spoor is onvolledig');
+  while(i<end){
+   tick+=vlq();let status=b[i];
+   if(status<128){if(!running)throw Error('Ongeldige MIDI running status');status=running}else{i++;if(status<240)running=status}
+   if(status===255){
+    let type=b[i++],len=vlq(),begin=i;
+    if(type===81&&len===3)tempos.push({tick,us:(b[i]*65536+b[i+1]*256+b[i+2])});
+    if(type===3)title=Array.from(b.slice(i,i+len)).map(n=>String.fromCharCode(n)).join('')||title;
+    i=begin+len;continue;
+   }
+   if(status===240||status===247){i+=vlq();continue}
+   const kind=status&240,channel=status&15;
+   let a=b[i++],v=kind===192||kind===208?0:b[i++];
+   if(kind===192&&program===null)program=a;
+   if(channel===9)continue;
+   const k=channel+':'+a,stack=active.get(k)||[];
+   if(kind===144&&v>0){stack.push({tick,note:a,track:tr,velocity:v});active.set(k,stack)}
+   else if(kind===128||(kind===144&&v===0)){
+    const on=stack.shift();if(on){events.push({...on,endTick:Math.max(tick,on.tick+1)});trackNotes++}
+   }
+  }
+  for(let stack of active.values())for(let on of stack){events.push({...on,endTick:Math.max(tick,on.tick+1)});trackNotes++}
+  i=end;tracks.push({id:tr,name:title,program,count:trackNotes});
+ }
+ tempos.sort((a,b)=>a.tick-b.tick);let merged=[];
+ for(let t of tempos){if(merged.length&&merged[merged.length-1].tick===t.tick)merged[merged.length-1].us=t.us;else merged.push({...t})}
+ let seconds=0;
+ for(let n=0;n<merged.length;n++){if(n)seconds+=(merged[n].tick-merged[n-1].tick)*merged[n-1].us/division/1e6;merged[n].seconds=seconds}
+ function toSeconds(t){let idx=0;while(idx+1<merged.length&&merged[idx+1].tick<=t)idx++;return merged[idx].seconds+(t-merged[idx].tick)*merged[idx].us/division/1e6}
+ return {notes:events.map(n=>({note:n.note,track:n.track,start:toSeconds(n.tick),end:toSeconds(n.endTick)})),tracks};
+}
+function loadImported(){
+ let chosen=Number($('track').value);
+ let use=chosen<0?allNotes:allNotes.filter(n=>n.track===chosen);
+ loadNotes(use,'import');
+}
+$('track').addEventListener('change',loadImported);
+$('file').addEventListener('change',async e=>{
+ let f=e.target.files?.[0];if(!f)return;
+ try{
+ let data=parseMidi(await f.arrayBuffer());if(!data.notes.length)throw Error('Geen speelbare pianonoten gevonden');
+ allNotes=data.notes;importedTracks=data.tracks.filter(t=>t.count>0);
+ $('song').querySelector('[value=import]')?.remove();$('song').add(new Option('♫ '+f.name,'import'));$('song').value='import';
+ const sel=$('track');sel.textContent='';sel.add(new Option('Alle sporen',-1));
+ for(let tr of importedTracks)sel.add(new Option(tr.name+' ('+tr.count+' noten)',tr.id));
+ const piano=importedTracks.find(t=>t.program!==null&&t.program>=0&&t.program<=7);
+ sel.value=piano?String(piano.id):String(importedTracks.sort((a,b)=>b.count-a.count)[0].id);
+ $('trackWrap').hidden=false;loadImported();
+ $('deviceStatus').textContent='✓ '+f.name+' automatisch ingelezen';
+ }catch(err){$('deviceStatus').textContent='Import mislukt: '+err.message}
+ e.target.value='';
+});
+makeDemo('ode');requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
