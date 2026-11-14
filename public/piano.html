@@ -134,7 +134,12 @@ function tick(timestamp){
  const dt=Math.min((timestamp-lastFrame)/1000,.075);lastFrame=timestamp;
  if(playing&&awaiting===null){
   let old=position;position=clamp(position+dt*speed,0,duration);
-  if(waiting)checkAwaiting();
+  if(waiting){
+   // Do not skip a note after a slow animation frame.
+   const crossed=notes.find(n=>n.start>=old-.001&&n.start<=position+.03&&!hit.has(n.id));
+   if(crossed){position=crossed.start;awaiting=crossed.start;expected=groupAt(crossed.start);feedback('Jij bent aan zet: '+expected.map(n=>noteName(n.note)).join(' · '))}
+   else checkAwaiting();
+  }
   else {
    for(let n of notes)if(n.start>old&&n.start<=position&&n.note>=minPitch){sound(n.note)}
   }
