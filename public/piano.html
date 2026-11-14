@@ -74,11 +74,16 @@ canvas{display:block;width:100%;height:420px;touch-action:manipulation}
 (() => {
 'use strict';
 const $=id=>document.getElementById(id);
-const canvas=$('roll'), ctx=canvas.getContext('2d'), minPitch=48, maxPitch=83;
+const canvas=$('roll'), ctx=canvas.getContext('2d');
+let minPitch=48,maxPitch=83;
 const whites=[], pitchPos=new Map(), nameOf=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
-for(let n=minPitch;n<=maxPitch;n++)if(![1,3,6,8,10].includes(n%12))whites.push(n);
-for(let i=0;i<whites.length;i++)pitchPos.set(whites[i],i);
-for(let n=minPitch;n<=maxPitch;n++)if(!pitchPos.has(n))pitchPos.set(n,pitchPos.get(n-1)+.68);
+function rebuildKeys(){
+ whites.length=0;pitchPos.clear();
+ for(let n=minPitch;n<=maxPitch;n++)if(![1,3,6,8,10].includes(n%12))whites.push(n);
+ for(let i=0;i<whites.length;i++)pitchPos.set(whites[i],i);
+ for(let n=minPitch;n<=maxPitch;n++)if(!pitchPos.has(n))pitchPos.set(n,pitchPos.get(n-1)+.68);
+}
+rebuildKeys();
 let notes=[], allNotes=[], importedTracks=[],duration=0,position=0,speed=.75,playing=false,waiting=true,awaiting=null,expected=[],pressed=new Map(),hit=new Set(),lastFrame=0,liveTimer=0,audioCtx=null,micStream=null,micAnalyser=null,micActive=false,midiAccess=null,updateUiLast=0;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function noteName(n){return nameOf[n%12]+(Math.floor(n/12)-1)}
@@ -98,11 +103,19 @@ function makeDemo(which){
 }
 function loadNotes(items,label){
  playing=false;awaiting=null;expected=[];hit.clear();
+ if(items.length&&items.some(n=>n.note<minPitch||n.note>maxPitch)){
+   const sorted=items.map(n=>n.note).filter(Number.isFinite).sort((a,b)=>a-b);
+   if(sorted.length){const middle=sorted[Math.floor(sorted.length/2)];
+     minPitch=clamp(Math.floor((middle-24)/12)*12,12,72);maxPitch=minPitch+47;rebuildKeys();
+   }
+ }
  notes=items.filter(n=>n.note>=minPitch&&n.note<=maxPitch).sort((a,b)=>a.start-b.start||a.note-b.note).map((n,i)=>({...n,id:i}));
  duration=notes.length?Math.max(...notes.map(n=>n.end))+.7:0;
  position=0;refresh();$('play').textContent='▶ Start';
  feedback(notes.length?'Klaar: '+notes.length+' noten':'Geen noten in het zichtbare bereik');
- if(!notes.length)$('deviceStatus').textContent='Geen pianonoten gevonden';
+ const outside=items.length-notes.length;
+ if(outside>0)$('deviceStatus').textContent=outside+' noten buiten zichtbaar bereik (4 octaven)';
+ else if(!notes.length)$('deviceStatus').textContent='Geen pianonoten gevonden';
 }
 function feedback(s,good=false){$('feedback').textContent=s;$('feedback').classList.toggle('good',good)}
 function getAudio(){audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx}
@@ -226,7 +239,9 @@ $('wait').addEventListener('change',e=>{waiting=e.target.checked;if(!waiting){aw
 $('speed').addEventListener('change',e=>{speed=Number(e.target.value)});
 $('seek').addEventListener('input',e=>{position=duration*Number(e.target.value)/1000;awaiting=null;expected=[];hit.clear();feedback('Nieuwe startpositie gekozen')});
 $('song').addEventListener('change',e=>{
- if(e.target.value==='import'){loadImported()}else makeDemo(e.target.value);
+ if(e.target.value==='import'){loadImported()}
+ else if(e.target.value==='ai'){loadNotes(aiNotes,'ai')}
+ else makeDemo(e.target.value);
 });
 async function midiConnect(){
  if(!navigator.requestMIDIAccess){$('deviceStatus').textContent='Web MIDI niet ondersteund in deze browser';return}
