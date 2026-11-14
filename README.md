@@ -102,3 +102,29 @@ De nieuwe interactieve pianomodus is beschikbaar via de knop **Piano Studio** in
 **Beperkingen van deze eerste versie:** de notenbaan toont C3 tot en met B5 (noten buiten dat bereik worden niet weergegeven); één MIDI-spoor kan handmatig worden gekozen wanneer meerdere sporen aanwezig zijn; microfoondetectie is niet geschikt voor complete opnames of polyfone stukken; automatische audio-naar-MIDI-analyse, publieke liedjescatalogus en leerlevels moeten nog worden toegevoegd. Spotify-streams worden **niet** gelezen, gedownload of gesynchroniseerd; dat past niet bij de Spotify API/developer rules. Voor automatische audioherkenning is de latere route een audio-bestand met toestemming verwerken via bijvoorbeeld het open-source **Basic Pitch** of een gespecialiseerde pianotranscriptie-engine.
 
 De oorspronkelijke Chordroom-bibliotheek blijft beschikbaar en de nieuwe pagina is onafhankelijk van de onofficiële Ultimate Guitar API.
+
+
+## Automatische audioherkenning met Basic Pitch (Piano Studio)
+
+Gebruik **Audio → noten (AI)** in `piano.html`. Selecteer een eigen MP3, WAV, OGG of andere browser-ondersteunde geluidsopname. Chordroom decodeert de audio, zet deze lokaal om naar mono 22.050 Hz, draait het open-source **Spotify Basic Pitch TypeScript**-model en toont de herkende noten direct op de piano roll. Geen handmatige noteninvoer, API-sleutel, account of eigen server nodig. De audio wordt **niet geüpload**; de benodigde JavaScript-bundel en modelbestanden worden vanaf je eigen GitHub Pages-site gedownload.
+
+- Analysebereik instelbaar: eerste 30, 60, 120 of 180 seconden. Om browsergeheugen en accuverbruik te beschermen, is 180 seconden voorlopig het maximum.
+- Voortgang en foutmelding worden in de interface getoond. Op mobiel kan analyse relatief zwaar zijn.
+- **Basic Pitch is geen Spotify-streamingkoppeling**. Audio en MIDI uit een Spotify-afspeelsessie worden niet gelezen of gesynchroniseerd.
+- Polyfone herkende noten worden in de pianoroll geplaatst. Audio-transcriptie is een *schatting*, geen perfecte partituur. Solo-piano of een geïsoleerd pianospeler levert meestal betere resultaten op dan een volledige mix met zang en drums. De roll toont een venster van vier octaven; sommige voorspelde noten vallen mogelijk buiten dit bereik.
+- Selecteren van een eigen bestand is nodig; automatisch publieke liedjes zoeken of liedjes rechtstreeks streamen is nog niet toegevoegd.
+- Verwerk alleen opnames waarvoor je toestemming hebt of die je zelf mag gebruiken. De AI-resultaten worden niet in een gedeelde online catalogus gepubliceerd.
+
+### Lokaal ontwikkelen / bouwen
+
+De AI-code is ondergebracht in `src/basic-pitch-client.js` en `src/transcription-utils.mjs`, met automatische build in GitHub Actions. Alleen het AI-gedeelte vereist npm:
+
+```sh
+npm install
+npm run build:piano-ai
+node server.mjs
+```
+
+De build maakt `public/basic-pitch.bundle.js` en `public/models/basic-pitch/{model.json,group1-shard1of1.bin}`. Dit zijn gegenereerde bestanden; voeg ze niet handmatig toe aan Git. De gewone Chordroom-pagina werkt ook zonder deze build. Bij GitHub Pages worden de bestanden vóór publicatie automatisch gegenereerd.
+
+Basic Pitch © Spotify AB, [Apache-2.0](https://github.com/spotify/basic-pitch-ts/blob/main/LICENSE). De library- en modelassets worden rechtstreeks uit `@spotify/basic-pitch@1.0.1` opgebouwd.
