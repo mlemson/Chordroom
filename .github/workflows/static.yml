@@ -59,6 +59,12 @@ jobs:
           node test/test.mjs
           node test/server-smoke.mjs
           node --test worker/test/worker.test.mjs
+      - name: Install music transcription dependencies
+        run: npm install --no-audit --no-fund
+      - name: Bundle Basic Pitch and stage AI model locally
+        run: npm run build:piano-ai
+      - name: Test transcription note conversion
+        run: node --test test/transcription-utils.test.mjs
       - uses: actions/configure-pages@v5
       - name: Configure API URL (no secret is written to the website)
         env:

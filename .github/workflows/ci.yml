@@ -13,6 +13,10 @@ jobs:
         with:
           node-version: '22'
       - run: node --check public/app.js && node --check worker/src/index.js
+      - run: node --test test/transcription-utils.test.mjs
+      - run: npm install --no-audit --no-fund
+      - run: npm run build:piano-ai
+      - run: test -s public/basic-pitch.bundle.js && test -s public/models/basic-pitch/model.json && test -s public/models/basic-pitch/group1-shard1of1.bin
       - run: node test/test.mjs
       - run: node test/server-smoke.mjs
       - run: node --test worker/test/worker.test.mjs
