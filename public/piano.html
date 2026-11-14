@@ -354,6 +354,69 @@ $('file').addEventListener('change',async e=>{
  }catch(err){$('deviceStatus').textContent='Import mislukt: '+err.message}
  e.target.value='';
 });
+
+let aiNotes=[], analysisRunning=false,loadPromise=null;
+function showAnalysis(stage,percent,detail=''){
+ $('analysisPanel').hidden=false;
+ $('analysisMessage').textContent=stage;
+ $('analysisProgress').value=Math.round(clamp(percent,0,1)*100);
+ $('analysisPercent').textContent=Math.round(clamp(percent,0,1)*100)+'%';
+ if(detail)$('analysisDetail').textContent=detail;
+}
+function loadPitchRuntime(){
+ if(window.ChordroomBasicPitch)return Promise.resolve(window.ChordroomBasicPitch);
+ if(loadPromise)return loadPromise;
+ loadPromise=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');script.src='./basic-pitch.bundle.js';script.async=true;
+   script.onload=()=>window.ChordroomBasicPitch?resolve(window.ChordroomBasicPitch):reject(new Error('Basic Pitch is niet geladen'));
+   script.onerror=()=>reject(new Error('AI-module kon niet worden geladen. Controleer de publicatie of verbinding.'));
+   document.head.append(script);
+ }).catch(e=>{loadPromise=null;throw e});
+ return loadPromise;
+}
+$('audioFile').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file||analysisRunning)return;
+ analysisRunning=true;
+ $('audioFile').disabled=true;$('analysisLength').disabled=true;
+ $('audioLabel').style.opacity='.5';
+ playing=false;$('play').textContent='▶ Start';awaiting=null;expected=[];
+ const hint='Analyse vindt plaats op dit apparaat. Het eerste gebruik downloadt het AI-model.';
+ try{
+   if(file.size>100*1024*1024)throw new Error('Bestand is groter dan 100 MB. Kies een korter audiobestand.');
+   showAnalysis('Geluid lezen',.02,hint);
+   const ctx=getAudio();
+   const decoded=await ctx.decodeAudioData(await file.arrayBuffer());
+   const seconds=Math.min(decoded.duration,Number($('analysisLength').value),180);
+   if(!Number.isFinite(seconds)||seconds<.35)throw new Error('Het audiofragment is te kort.');
+   showAnalysis('Audio omzetten naar mono · 22,05 kHz',.07,hint);
+   const offline=new OfflineAudioContext(1,Math.ceil(seconds*22050),22050);
+   const src=offline.createBufferSource();src.buffer=decoded;src.connect(offline.destination);
+   src.start(0,0,seconds);
+   const mono=await offline.startRendering();
+   showAnalysis('AI-bibliotheek laden',.12,hint);
+   const ai=await loadPitchRuntime();
+   const modelUrl=new URL('./models/basic-pitch/model.json',window.location.href).href;
+   const result=await ai.transcribeAudioBuffer(mono,modelUrl,(stage,p)=>{
+      showAnalysis(stage,.15+.83*p,hint);
+   });
+   if(!result.length)throw new Error('Geen duidelijke noten gevonden. Probeer een solo-pianofragment.');
+   aiNotes=result;
+   $('song').querySelector('[value=ai]')?.remove();
+   $('song').add(new Option('✨ '+file.name+' · AI-herkenning','ai'));
+   $('song').value='ai';$('trackWrap').hidden=true;
+   loadNotes(aiNotes,'ai');
+   const message=result.length+' noten herkend uit '+Math.round(seconds)+' seconden';
+   showAnalysis('Herkenning afgerond',1,message+' · Controleer de noten: dit is een AI-schatting.');
+   $('deviceStatus').textContent='✓ '+message;
+   feedback('Klaar om mee te spelen: '+result.length+' AI-noten',true);
+ }catch(err){
+   showAnalysis('Herkenning mislukt',0,String(err?.message||err));
+   $('deviceStatus').textContent='Audioherkenning mislukt';
+ }finally{
+   analysisRunning=false;$('audioFile').disabled=false;$('analysisLength').disabled=false;
+   $('audioLabel').style.opacity='1';e.target.value='';
+ }
+});
 makeDemo('ode');requestAnimationFrame(tick);
 })();
 </script>
